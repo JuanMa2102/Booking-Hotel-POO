@@ -1,5 +1,7 @@
 import pandas as pd
 df = pd.read_csv('hotels.csv', dtype={'id': str})
+df_cards = pd.read_csv('cards.csv', dtype=str).to_dict(orient='records')
+df_cards_security = pd.read_csv('card_security.csv', dtype=str)
 
 class Hotel:
     def __init__(self, hotel_id):
@@ -31,15 +33,44 @@ class ReservationTicket:
         """
         return content
 
+class CreditCard:
+    def __init__(self, number ):
+        self.number = number
+    
+    def validate(self, expiration_date, holder, cvc):
+        card_data = {"number": self.number, "expiration_date": expiration_date, "holder": holder, "cvc": cvc}
+        if card_data in df_cards:
+            return True
+        return False
+    
+class SecureCreditCard(CreditCard):
+    def authenticate(self, given_password):
+        passsword = df_cards_security.loc[df_cards_security['number'] == self.number, 'password'].squeeze()
+        if passsword == given_password:
+            return True
+        return False
 
-print(df)
+print( df )
 hotel_id = input("Enter hotel ID: ")
 hotel = Hotel(hotel_id)
 if hotel.available():
-    hotel.book()
-    name = input("Enter your name: ")
-    reservation = ReservationTicket(name, hotel)
-    print( reservation.generate() )
+    # card_number = input("Enter your credit card number: ")
+    
+    credit_card = SecureCreditCard( number = "1234-5678-9012-3456" )
+    if credit_card.validate(
+        expiration_date = "12/25",  # Placeholder for expiration date
+        holder= "John Doe",  # Placeholder for card holder name
+        cvc = "123"  # Placeholder for CVC
+    ):
+        if credit_card.authenticate(given_password="securepassword123"):  # Placeholder for password
+            hotel.book()
+            name = input("Enter your name: ")
+            reservation = ReservationTicket(name, hotel)
+            print( reservation.generate() )
+        else:
+            print("Authentication failed. Invalid password.")
+    else:
+        print("Invalid credit card details.")
 else:
     print("Sorry, this hotel is not available.")
     
